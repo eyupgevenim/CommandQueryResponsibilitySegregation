@@ -2,6 +2,8 @@
 {
     public interface IQueryInvoker
     {
-        IResult Query(IQuery query);
+        TResult Query<TQuery, TResult>(TQuery query) 
+            where TQuery : IQuery
+            where TResult : IResult;
     }
 }

@@ -9,7 +9,7 @@ namespace CommandQueryResponsibilitySegregation.Infrastructure.Initial
     {
         public static void CreateDatabase(this ServiceProvider serviceProvider)
         {
-            var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json", true, true).Build();
+            var configuration = serviceProvider.GetRequiredService<IConfiguration>();
             var dbName = configuration.GetConnectionString("DefaultConnection");
             var filePath = dbName.Replace("Filename=", "");
             if (File.Exists(filePath))

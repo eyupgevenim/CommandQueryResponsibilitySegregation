@@ -3,13 +3,14 @@ using CommandQueryResponsibilitySegregation.Infrastructure.Command;
 using CommandQueryResponsibilitySegregation.Infrastructure.DbContexts;
 using CommandQueryResponsibilitySegregation.Infrastructure.Query;
 using CommandQueryResponsibilitySegregation.Infrastructure.Repository;
+using CommandQueryResponsibilitySegregation.Infrastructure.Initial;
 using CommandQueryResponsibilitySegregation.Queries.Products;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 
-namespace CommandQueryResponsibilitySegregation
+namespace CommandQueryResponsibilitySegregation.Infrastructure.DependencyInjection
 {
     public static class RegisterDependencyInjection
     {
@@ -19,7 +20,12 @@ namespace CommandQueryResponsibilitySegregation
             get
             {
                 if (_servicesProvider == null)
+                {
+                    //Register DI
                     _servicesProvider = CreateServices();
+                    //Create DB
+                    _servicesProvider.CreateDatabase();
+                }
                 
                 return _servicesProvider;
             }
@@ -29,8 +35,11 @@ namespace CommandQueryResponsibilitySegregation
         {
             IServiceCollection services = new ServiceCollection();
 
+            var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json", true, true).Build();
+            services.AddSingleton<IConfiguration>(configuration);
+
             //DbContext Configurations
-            services.AddDbContextConfigurations();
+            services.AddDbContextConfigurations(configuration.GetConnectionString("DefaultConnection"));
 
             services.AddScoped(typeof(ICommandRepository<>), typeof(Repository<>));
             services.AddScoped(typeof(IQueryRepository<>), typeof(Repository<>));
@@ -48,13 +57,11 @@ namespace CommandQueryResponsibilitySegregation
             return services.BuildServiceProvider();
         }
 
-        private static void AddDbContextConfigurations(this IServiceCollection services)
+        private static void AddDbContextConfigurations(this IServiceCollection services, string connectionString)
         {
-            var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json", true, true).Build();
-
             //for Sqlite
             services.AddDbContext<AppDbContext>(options =>
-                options.UseSqlite(configuration.GetConnectionString("DefaultConnection"),
+                options.UseSqlite(connectionString,
                 op =>
                 {
                     op.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName);
@@ -63,10 +70,21 @@ namespace CommandQueryResponsibilitySegregation
 
             //for SqlServer
             //services.AddDbContext<AppDbContext>(options => options.UseSqlServer(
-            //        configuration.GetConnectionString("DefaultConnection"),
+            //        connectionString,
             //        opt => opt.UseRowNumberForPaging()
             //    )
             //);
+        }
+    }
+
+    public static class ContextEngine<T>
+    {
+        public static T Resolve
+        {
+            get
+            {
+                return (T)RegisterDependencyInjection.ServicesProvider.GetService(typeof(T));
+            }
         }
     }
 }

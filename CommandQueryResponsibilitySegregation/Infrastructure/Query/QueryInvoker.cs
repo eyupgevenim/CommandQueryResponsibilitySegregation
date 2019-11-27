@@ -1,23 +1,18 @@
-﻿using System;
+﻿using CommandQueryResponsibilitySegregation.Infrastructure.DependencyInjection;
+using System;
 
 namespace CommandQueryResponsibilitySegregation.Infrastructure.Query
 {
     public class QueryInvoker : IQueryInvoker
     {
-        private readonly IQueryHandler<IQuery, IResult> _queryHandler;
-
-        public QueryInvoker(IQueryHandler<IQuery, IResult> queryHandler)
-        {
-            _queryHandler = queryHandler;
-        }
-
-        public IResult Query(IQuery query) 
+        public TResult Query<TQuery, TResult>(TQuery query)
+            where TQuery : IQuery
+            where TResult : IResult
         {
             if (query == null)
-            {
                 throw new ArgumentNullException("query");
-            }
 
+            var _queryHandler = ContextEngine<IQueryHandler<TQuery, TResult>>.Resolve;
             return _queryHandler.Query(query);
         }
     }
